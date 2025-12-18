@@ -1,84 +1,25 @@
 from typing import List
 from models.expense import Expense
 from validators.expense_validator import ExpenseValidator
+from repositories.json_expense_repository import JsonExpenseRepository
 
 
 
-
-
-
-# Expense Tracker (Basic)
-
-# Create a program where the user can:
-
-# Add an expense (amount + category)
-# View all expenses
-# View total amount spent
-# Store data in a list of dictionaries.
-
-
-
-import json
 
 from datetime import date
 
 lst: List[Expense] = []      # list of objects
 category_totals = {}
 
-
-# -------------------------
-# Load expenses at startup
-# -------------------------
-def load_expenses():
-    global lst
-
-    try:
-        with open("expenses.json", "r") as f:
-            data = json.load(f)
-
-        lst = [
-            Expense(
-                amount=item["amount"],
-                category=item["category"],
-                description="N/A",
-                expense_date=date.fromisoformat(item["date"])
-            )
-            for item in data
-        ]
-
-        print("Loaded expenses from file.\n")
-
-    except FileNotFoundError:
-        print("📁 No existing file found. Starting fresh.\n")
-
-
-
-# -------------------------
-# Save expenses
-# -------------------------
-
-def save_expenses():
-
-    temp = []
-    for exp in lst:
-        temp.append({
-            "category": exp.category,
-            "amount": exp.amount,
-            "date": exp.expense_date.isoformat()
-        })
-
-    with open("expenses.json", "w") as f:
-        json.dump(temp, f, indent=4)
-
-    print("💾 Saved to expenses.json\n")
-
-
+repo = JsonExpenseRepository()
+lst = repo.load_all()
 
 # -------------------------
 # Main Expense Tracker Logic
 # -------------------------
 
 def expense_tracker(n):
+    global lst
     try:
         match n:
             # -------------------------
@@ -268,12 +209,15 @@ def expense_tracker(n):
             # 8. Save All Expenses
             # -------------------------
             case 8:
-                save_expenses()
+                
+                repo.save_all(lst)
+                print("💾 Expenses saved successfully\n")
             # -------------------------
             # 9. Load from File
             # -------------------------
             case 9:
-                load_expenses()
+                lst = repo.load_all()
+                print("📂 Expenses loaded successfully\n")
             # -------------------------
             # 0. Exit   
             # -------------------------
@@ -288,7 +232,7 @@ def expense_tracker(n):
 # Program Start
 # -------------------------
 
-load_expenses()
+
 print("=================================")
 print("----- Expense Tracker-----")
 print("=================================")
