@@ -1,247 +1,197 @@
-from typing import List
+from datetime import date
+
 from models.expense import Expense
-from validators.expense_validator import ExpenseValidator
+from services.expense_service import ExpenseService
 from repositories.json_expense_repository import JsonExpenseRepository
 
 
-
-
-from datetime import date
-
-lst: List[Expense] = []      # list of objects
-category_totals = {}
-
+# -------------------------
+# Dependency wiring
+# -------------------------
 repo = JsonExpenseRepository()
-lst = repo.load_all()
+service = ExpenseService(repo)
+
 
 # -------------------------
 # Main Expense Tracker Logic
 # -------------------------
-
-def expense_tracker(n):
-    global lst
+def expense_tracker(n: int) -> None:
     try:
         match n:
             # -------------------------
             # 1. Add Expense
             # -------------------------
             case 1:
-
                 try:
                     category = input("Enter the category: ").strip()
                     amount = int(input("Enter the amount: "))
 
-                    validator = ExpenseValidator()
-
                     expense = Expense(
-                        amount = amount,
-                        category = category,
-                        description = "N/A",         # temporary
-                        expense_date = date.today()
-                        )
+                        amount=amount,
+                        category=category,
+                        description="N/A",
+                        expense_date=date.today()
+                    )
 
-                    validator.validate(expense)
-                    lst.append(expense)
-
+                    service.add_expense(expense)
                     print("✅ Expense added successfully!\n")
+
                 except ValueError as e:
                     print(f"❌ {e}")
+
             # -------------------------
             # 2. Show Total per Category
             # -------------------------
             case 2:
-                
-                category_totals.clear()
+                totals = service.get_total_per_category()
 
-                for expense in lst:
-                    cat = expense.category
-                    amt = expense.amount
+                if not totals:
+                    print("❌ No expenses found.\n")
+                    return
 
-                    if cat in category_totals:
-                        category_totals[cat] += amt
-                    else:
-                        category_totals[cat] = amt
-                
                 print(f"{'No':<5}{'Category':<15}{'Total Amount':<15}")
                 print("-" * 35)
-                for index, (cat, amt) in enumerate(category_totals.items(), start=1):
-                    print(f"{index:<5}{cat:<15}{amt:<15}")
 
-                print()
+                for i, (cat, amt) in enumerate(totals.items(), start=1):
+                    print(f"{i:<5}{cat:<15}{amt:<15}")
 
             # -------------------------
-            # 3. Show Total Expense
+            # 3. Show Total Expenses
             # -------------------------
             case 3:
-                try:
+                expenses = service.get_all()
 
-                    print(f"{'No':<5}{'Category':<15}{'Amount':<10}{'Date'}")
-                    print("-" * 40)
-                    for i, expense in enumerate(lst, start=1):
-                        print(f"{i:<5}{expense.category:<15}{expense.amount:<10}{expense.expense_date}")   
-                    print("-" * 40) #-------------------------------------------------  
+                if not expenses:
+                    print("❌ No expenses found.\n")
+                    return
 
-                    total = 0
-                    total = sum(e.amount for e in lst)
-                    print(f"Total: {total}")
+                print(f"{'No':<5}{'Category':<15}{'Amount':<10}{'Date'}")
+                print("-" * 40)
 
-                except ValueError:
-                    print("Invalid input!")
+                for i, e in enumerate(expenses, start=1):
+                    print(f"{i:<5}{e.category:<15}{e.amount:<10}{e.expense_date}")
 
-                except TypeError:
-                    print("Wrong inputs!!")
+                print("-" * 40)
+                print(f"Total: {service.get_total()}")
 
             # -------------------------
             # 4. Delete Expense
             # -------------------------
             case 4:
-                if not lst:
+                expenses = service.get_all()
+
+                if not expenses:
                     print("❌ No expenses to delete.\n")
                     return
 
-                print("\n📌 Expenses:")
-                for i, exp in enumerate(lst, start=1):
-                    print(f"{i}. {exp}")
+                for i, e in enumerate(expenses, start=1):
+                    print(f"{i}. {e}")
 
                 index = int(input("\nEnter index to delete: "))
+                service.delete(index - 1)
+                print("🗑 Expense deleted successfully\n")
 
-                if index < 1 or index > len(lst):
-                    print("❌ Invalid index.\n")
-                else:
-                    deleted = lst.pop(index - 1)
-                    print(f"🗑 Deleted: {deleted}\n")
-
-                    
             # -------------------------
             # 5. Update Expense
             # -------------------------
             case 5:
-                print("All Expenses:")
+                expenses = service.get_all()
 
-                # Show all expenses with indexes
-                for i, expense in enumerate(lst, start=1):
-                    print(f"{i}. {expense}")
+                if not expenses:
+                    print("❌ No expenses to update.\n")
+                    return
 
-                try:
-                    # Step 1: Ask which expense to update
-                    index = int(input("\nEnter index of the expense you want to update: "))
+                for i, e in enumerate(expenses, start=1):
+                    print(f"{i}. {e}")
 
-                    if index < 1 or index > len(lst):
-                        print("❌ Invalid index")
-                        return
+                index = int(input("\nEnter index: ")) - 1
 
-                    expense = lst[index - 1]   # Expense object
+                print("1. category")
+                print("2. amount")
+                print("3. date")
 
-                    # Step 2: Ask which field to update
-                    print("\nWhat do you want to update?")
-                    print("1. category")
-                    print("2. amount")
-                    print("3. date")
+                choice = input("Enter choice: ")
 
-                    choice = input("Enter choice: ")
+                if choice == "1":
+                    service.update_category(index, input("New category: ").strip())
 
-                    if choice == "1":
-                        new_value = input("Enter new category: ").strip()
-                        expense.category = new_value
+                elif choice == "2":
+                    service.update_amount(index, int(input("New amount: ")))
 
-                    elif choice == "2":
-                        new_value = int(input("Enter new amount: "))
-                        expense.amount = new_value
+                elif choice == "3":
+                    service.update_date(
+                        index,
+                        date.fromisoformat(input("New date (YYYY-MM-DD): "))
+                    )
+                else:
+                    print("❌ Invalid choice.")
+                    return
 
-                    elif choice == "3":
-                        new_value_raw = input("Enter new date (YYYY-MM-DD): ")
-                        expense.expense_date = date.fromisoformat(new_value_raw)
-
-                    else:
-                        print("❌ Invalid choice.")
-                        return
-
-                    print("✅ Updated Successfully\n")
-                    print("Updated expense:", expense)
-
-                except ValueError as e:
-                    print(f"❌ {e}")
-
+                print("✅ Expense updated\n")
 
             # -------------------------
             # 6. Search by category
-            # ------------------------
+            # -------------------------
             case 6:
+                category = input("Enter category: ")
+                matches = service.find_by_category(category)
 
-                try:
+                if not matches:
+                    print("❌ No matching expenses found.\n")
+                    return
 
-                    choice = input("Enter category: ")
-                    matches = [item for item in lst if item.category == choice]
-
-                    if matches:
-                        for i, item in enumerate(matches, start=1):
-                            print(f"{i}. {item.category} : {item.amount} on {item.expense_date}")
-
-                    else:
-                        raise KeyError(f"'{choice}' not found in expenses.")
-
-                except ValueError:
-                    print("❌ Invalid category!!")
-                
-                except KeyError as e:
-                    print("Error: ", e)
+                for i, e in enumerate(matches, start=1):
+                    print(f"{i}. {e.category} : {e.amount} on {e.expense_date}")
 
             # -------------------------
             # 7. Search by date
             # -------------------------
             case 7:
+                search_date = date.fromisoformat(
+                    input("Enter date (YYYY-MM-DD): ")
+                )
+                matches = service.find_by_date(search_date)
 
-                d = input("Enter a date (YYYY-MM-DD): ")
-                    
-                search_date = date.fromisoformat(d)
-                result = [item for item in lst if item.expense_date == search_date]
+                if not matches:
+                    print("❌ No matching expenses found.\n")
+                    return
 
-
-                if result:
-                    print(f"📌 Expenses found on {d} are: ")
-                    for i, item in enumerate(result, start=1):
-                        print(f"{i}. {item.category} : {item.amount}")
-                else:
-                    print(f"❌ No expenses found on {d}") 
-
+                for i, e in enumerate(matches, start=1):
+                    print(f"{i}. {e.category} : {e.amount}")
 
             # -------------------------
-            # 8. Save All Expenses
+            # 8. Save Expenses
             # -------------------------
             case 8:
-                
-                repo.save_all(lst)
+                service.save()
                 print("💾 Expenses saved successfully\n")
+
             # -------------------------
-            # 9. Load from File
+            # 9. Load Expenses
             # -------------------------
             case 9:
-                lst = repo.load_all()
+                service.load()
                 print("📂 Expenses loaded successfully\n")
-            # -------------------------
-            # 0. Exit   
-            # -------------------------
 
+            case _:
+                print("❌ Invalid option")
 
     except Exception as e:
         print("Error:", e)
 
 
-
 # -------------------------
 # Program Start
 # -------------------------
-
-
 print("=================================")
-print("----- Expense Tracker-----")
+print("----- Expense Tracker -----")
 print("=================================")
+
 while True:
     try:
         print("=================================")
         print("     📘 Expense Tracker Menu")
         print("=================================")
-
         print("1. ➕  Add Expense")
         print("2. 📊  Show Total per Category")
         print("3. 💰  Show Total Expenses")
@@ -256,13 +206,13 @@ while True:
 
         n = int(input("Enter choice: "))
         print()
+
+        if n == 0:
+            print("Exiting Expense Tracker. Goodbye!")
+            print("-" * 40)
+            break
+
         expense_tracker(n)
 
     except Exception as e:
         print("Error:", e)
-
-    if n == 0: # type: ignore
-        print("Exiting Expense Tracker. Goodbye!")
-        print("-" * 40) #------------------------------------------------- 
-        break
-
