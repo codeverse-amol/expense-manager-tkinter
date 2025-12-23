@@ -3,8 +3,9 @@ import json
 from typing import List
 from datetime import date
 
-from models.expense import Expense
-from repositories.expense_repository import ExpenseRepository
+from src.models.expense import Expense
+from src.repositories.expense_repository import ExpenseRepository
+
 
 
 class JsonExpenseRepository(ExpenseRepository):

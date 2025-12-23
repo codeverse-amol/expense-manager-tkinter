@@ -1,5 +1,5 @@
 from datetime import date
-from models.expense import Expense
+from src.models.expense import Expense
 
 class ExpenseValidator:
 

@@ -1,8 +1,9 @@
 from datetime import date
 
-from models.expense import Expense
-from services.expense_service import ExpenseService
-from repositories.json_expense_repository import JsonExpenseRepository
+from src.models.expense import Expense
+from src.services.expense_service import ExpenseService
+from src.repositories.json_expense_repository import JsonExpenseRepository
+
 
 
 # -------------------------

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from models.expense import Expense
+from src.models.expense import Expense
 
 
 
